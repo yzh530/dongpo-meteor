@@ -1,0 +1,1268 @@
+html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>雪泥鸿爪 · 苏东坡生平互动卷</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    body {
+      background: #3e2e1f;
+      background-image: radial-gradient(circle at 20% 30%, #5a4a35 0%, #2b1f12 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'KaiTi', '楷体', 'STKaiti', '华文楷体', 'Noto Serif SC', serif;
+      padding: 20px;
+    }
+
+    /* ---------- 线装书主体（桌面端：左右页） ---------- */
+    .book-wrapper {
+      position: relative;
+      width: 1200px;
+      max-width: 98vw;
+      height: 750px;
+      max-height: 90vh;
+      background: #e8dccc;
+      border-radius: 4px 12px 12px 4px;
+      box-shadow: 
+        0 20px 40px rgba(0, 0, 0, 0.6),
+        inset -2px 0 8px rgba(0, 0, 0, 0.1),
+        inset 2px 0 8px rgba(255, 255, 240, 0.5);
+      display: flex;
+      padding: 12px 8px 12px 24px;
+      background-image: repeating-linear-gradient(45deg, rgba(180, 150, 120, 0.1) 0px, rgba(180, 150, 120, 0.1) 2px, transparent 2px, transparent 6px);
+      border-left: 14px solid #6b4f35;
+      border-right: 6px solid #4a3724;
+      transition: all 0.3s;
+    }
+
+    .book-wrapper::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 16px;
+      background: linear-gradient(90deg, #4a3724 0%, #7a5f44 40%, #4a3724 100%);
+      border-radius: 4px 0 0 4px;
+      box-shadow: inset -2px 0 4px rgba(0,0,0,0.3);
+    }
+
+    .page-left, .page-right {
+      flex: 1;
+      position: relative;
+      background: #faf3e8;
+      background-image: 
+        linear-gradient(rgba(200, 180, 150, 0.15) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200, 180, 150, 0.1) 1px, transparent 1px);
+      background-size: 30px 30px, 30px 30px;
+      box-shadow: inset 0 0 30px rgba(180, 150, 120, 0.3);
+      overflow: hidden;
+    }
+
+    .page-left {
+      border-radius: 8px 0 0 8px;
+      margin-right: 4px;
+      box-shadow: inset -4px 0 12px rgba(100, 70, 40, 0.15);
+    }
+
+    .page-right {
+      border-radius: 0 8px 8px 0;
+      margin-left: 4px;
+      box-shadow: inset 4px 0 12px rgba(100, 70, 40, 0.15);
+      display: flex;
+      flex-direction: column;
+      padding: 30px 30px 0 30px; /* 底部 padding 移除，由内部容器控制 */
+      overflow: hidden;
+    }
+
+    /* 右页内部可滚动内容区 */
+    .story-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding-bottom: 20px;
+      scrollbar-width: thin;
+      scrollbar-color: #b8a58b #f0e6d8;
+    }
+    .story-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+    .story-scroll::-webkit-scrollbar-thumb {
+      background: #b8a58b;
+      border-radius: 10px;
+    }
+
+    /* ---------- 地图容器 ---------- */
+    #mapContainer {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    #mapCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+      transition: opacity 0.4s ease;
+    }
+
+    #mapCanvas.macro-hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #microCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+      cursor: crosshair;
+    }
+
+    #microCanvas.show {
+      display: block;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    @keyframes fadeIn {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+
+    /* ---------- 返回按钮 ---------- */
+    .back-btn {
+      position: fixed;
+      top: 30px;
+      left: 30px;
+      z-index: 9999;
+      background: rgba(232, 220, 204, 0.95);
+      border: 2px solid #b8a58b;
+      border-radius: 40px;
+      padding: 8px 20px;
+      font-size: 15px;
+      color: #5a3e2b;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+      font-family: 'KaiTi', serif;
+      transition: all 0.2s;
+      backdrop-filter: blur(6px);
+    }
+
+    .back-btn:hover {
+      background: #dacbb8;
+      transform: scale(1.05);
+    }
+
+    .back-btn.show {
+      display: flex;
+    }
+
+    .level-indicator {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 100;
+      background: rgba(232, 220, 204, 0.85);
+      border: 1px solid #c9ad8c;
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 12px;
+      color: #8b6f4c;
+      letter-spacing: 2px;
+      font-family: 'KaiTi', serif;
+      backdrop-filter: blur(4px);
+    }
+
+    /* ---------- 站点印章 ---------- */
+    .station-marker {
+      position: absolute;
+      width: 44px;
+      height: 44px;
+      transform: translate(-50%, -50%);
+      cursor: pointer;
+      z-index: 20;
+      transition: all 0.25s ease;
+      filter: drop-shadow(2px 4px 6px rgba(60, 30, 10, 0.4));
+    }
+
+    .station-marker:hover {
+      transform: translate(-50%, -50%) scale(1.2);
+      filter: drop-shadow(2px 6px 10px rgba(120, 40, 10, 0.6));
+    }
+
+    .station-marker .seal {
+      width: 100%;
+      height: 100%;
+      background: #b34a3a;
+      border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #f5e6c8;
+      font-size: 14px;
+      font-weight: bold;
+      font-family: 'STKaiti', 'KaiTi', serif;
+      border: 2px dashed #d9b382;
+      box-shadow: inset 0 0 8px rgba(0,0,0,0.3);
+      text-align: center;
+      line-height: 1.1;
+      padding: 3px;
+      word-break: break-all;
+      transition: all 0.3s;
+    }
+
+    .station-marker.active .seal {
+      background: #8b2f1f;
+      box-shadow: 0 0 0 4px rgba(200, 120, 60, 0.5), inset 0 0 12px #ffd966;
+      border-color: #ffd966;
+    }
+
+    .spot-marker {
+      position: absolute;
+      width: 36px;
+      height: 36px;
+      transform: translate(-50%, -50%);
+      cursor: pointer;
+      z-index: 25;
+      transition: all 0.25s ease;
+      filter: drop-shadow(1px 3px 4px rgba(60, 30, 10, 0.4));
+    }
+
+    .spot-marker:hover {
+      transform: translate(-50%, -50%) scale(1.25);
+    }
+
+    .spot-marker .spot-seal {
+      width: 100%;
+      height: 100%;
+      background: #2b6b4a;
+      border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #f5e6c8;
+      font-size: 11px;
+      font-weight: bold;
+      font-family: 'STKaiti', 'KaiTi', serif;
+      border: 2px dotted #b8d8c8;
+      box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
+      text-align: center;
+      line-height: 1.1;
+      padding: 2px;
+      word-break: break-all;
+    }
+
+    .spot-marker.active .spot-seal {
+      background: #1a4d33;
+      box-shadow: 0 0 0 4px rgba(100, 200, 140, 0.5), inset 0 0 10px #b8ffd8;
+      border-color: #b8ffd8;
+    }
+
+    /* ---------- 右页内容排版 ---------- */
+    .story-header {
+      font-family: 'STKaiti', 'KaiTi', '楷体', cursive;
+      font-size: 26px;
+      color: #5a3e2b;
+      border-bottom: 2px dashed #c9ad8c;
+      padding-bottom: 12px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      letter-spacing: 3px;
+      flex-shrink: 0;
+    }
+
+    .story-header .date-tag {
+      font-size: 15px;
+      color: #8b6f4c;
+      letter-spacing: 0;
+      font-family: 'KaiTi', serif;
+      background: #ede0d0;
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid #c9ad8c;
+    }
+
+    .story-title {
+      font-size: 28px;
+      color: #3e2a1a;
+      margin: 10px 0 8px 0;
+      font-family: 'STKaiti', 'KaiTi', cursive;
+      text-shadow: 1px 1px 0 rgba(200, 170, 140, 0.3);
+    }
+
+    .story-sub {
+      font-size: 16px;
+      color: #8b6f4c;
+      margin-bottom: 20px;
+      font-style: italic;
+      border-left: 4px solid #b34a3a;
+      padding: 8px 0 8px 16px;
+      background: rgba(200, 170, 140, 0.1);
+    }
+
+    .poem-box {
+      background: #f3eadc;
+      border-left: 6px solid #b34a3a;
+      padding: 18px 18px 14px 22px;
+      margin: 16px 0 20px 0;
+      border-radius: 0 20px 20px 0;
+      box-shadow: 4px 4px 0 rgba(160, 120, 90, 0.15);
+      position: relative;
+    }
+
+    .poem-box::before {
+      content: '❝';
+      font-size: 40px;
+      color: #c9ad8c;
+      position: absolute;
+      top: -6px;
+      left: 8px;
+      opacity: 0.5;
+      font-family: serif;
+    }
+
+    .poem-text {
+      font-family: 'STKaiti', 'KaiTi', cursive;
+      font-size: 19px;
+      line-height: 1.7;
+      color: #2b1f12;
+      white-space: pre-line;
+      letter-spacing: 1.5px;
+      text-align: center;
+    }
+
+    .poem-source {
+      text-align: right;
+      font-size: 13px;
+      color: #8b6f4c;
+      margin-top: 10px;
+      font-style: italic;
+    }
+
+    .story-text {
+      font-size: 17px;
+      line-height: 1.85;
+      color: #3e2e1f;
+      text-align: justify;
+      text-indent: 2em;
+    }
+
+    .story-text p {
+      margin-bottom: 12px;
+    }
+
+    /* ---------- 时间轴（固定在右页底部，不遮挡文字） ---------- */
+    .timeline-container {
+      flex-shrink: 0;
+      background: rgba(230, 215, 195, 0.95);
+      backdrop-filter: blur(4px);
+      border-radius: 40px;
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 4px 12px rgba(60, 40, 20, 0.3);
+      border: 1px solid #b8a58b;
+      z-index: 50;
+      margin: 8px 0 16px 0;
+    }
+
+    .timeline-container label {
+      font-size: 14px;
+      color: #5a3e2b;
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+
+    #timeSlider {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      background: #b8a58b;
+      border-radius: 10px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    #timeSlider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      background: #b34a3a;
+      border-radius: 50%;
+      border: 2px solid #f5e6c8;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      cursor: pointer;
+    }
+
+    .age-display {
+      font-size: 17px;
+      color: #b34a3a;
+      font-weight: bold;
+      min-width: 58px;
+      text-align: center;
+      font-family: 'KaiTi', serif;
+      background: #f5e6c8;
+      padding: 2px 10px;
+      border-radius: 20px;
+      border: 1px solid #c9ad8c;
+    }
+
+    .audio-toggle {
+      position: absolute;
+      top: 12px;
+      right: 20px;
+      z-index: 60;
+      background: #e8dccc;
+      border: 2px solid #b8a58b;
+      border-radius: 40px;
+      padding: 6px 14px;
+      font-size: 14px;
+      color: #5a3e2b;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      transition: all 0.2s;
+      font-family: 'KaiTi', serif;
+    }
+
+    .audio-toggle:hover {
+      background: #dacbb8;
+    }
+
+    .audio-toggle.active {
+      background: #b34a3a;
+      color: #f5e6c8;
+      border-color: #8b2f1f;
+    }
+
+    /* 动画 */
+    @keyframes scrollOpen {
+      0% { transform: scaleX(0.85) scaleY(0.92); opacity: 0.4; }
+      100% { transform: scaleX(1) scaleY(1); opacity: 1; }
+    }
+
+    .story-scroll.animate {
+      animation: scrollOpen 0.4s ease-out;
+    }
+
+    @keyframes inkSpread {
+      0% { box-shadow: inset 0 0 0 0 rgba(180, 70, 40, 0.6); }
+      100% { box-shadow: inset 0 0 40px 20px rgba(180, 70, 40, 0); }
+    }
+
+    .ink-flash {
+      animation: inkSpread 0.6s ease-out;
+    }
+
+    /* ---------- 手机端：上下页模式，固定宽高比不变形 ---------- */
+    @media (max-width: 800px) {
+      body {
+        padding: 0;
+        background: #2b1f12;
+        align-items: flex-start;
+        min-height: 100vh;
+      }
+
+      .book-wrapper {
+        width: 100vw;
+        max-width: 100vw;
+        height: 100vh;
+        max-height: 100vh;
+        flex-direction: column;
+        padding: 0;
+        border-left: none;
+        border-right: none;
+        border-radius: 0;
+        background: #e8dccc;
+        box-shadow: none;
+      }
+
+      .book-wrapper::before {
+        display: none;
+      }
+
+      /* 左页（地图）：占据上半部分，固定比例 16:9 不变形 */
+      .page-left {
+        flex: none;
+        width: 100vw;
+        height: 56.25vw;       /* 16:9 比例，随宽度自适应 */
+        max-height: 45vh;      /* 限制最大高度，避免地图过高 */
+        margin: 0;
+        border-radius: 0;
+        box-shadow: inset 0 -4px 12px rgba(100, 70, 40, 0.15);
+        flex-shrink: 0;
+      }
+
+      /* 右页（文字）：占据剩余空间 */
+      .page-right {
+        flex: 1;
+        margin: 0;
+        border-radius: 0;
+        padding: 16px 16px 0 16px;
+        box-shadow: inset 0 4px 12px rgba(100, 70, 40, 0.15);
+        overflow: hidden;
+      }
+
+      .story-header {
+        font-size: 20px;
+        padding-bottom: 8px;
+        margin-bottom: 12px;
+      }
+
+      .story-header .date-tag {
+        font-size: 13px;
+        padding: 3px 10px;
+      }
+
+      .story-title {
+        font-size: 22px;
+      }
+
+      .story-sub {
+        font-size: 14px;
+        padding: 6px 0 6px 12px;
+      }
+
+      .poem-text {
+        font-size: 16px;
+        letter-spacing: 1px;
+      }
+
+      .story-text {
+        font-size: 15px;
+        line-height: 1.75;
+      }
+
+      /* 时间轴在手机端位于右页底部，不遮挡文字 */
+      .timeline-container {
+        padding: 8px 14px;
+        gap: 10px;
+        margin: 6px 0 10px 0;
+      }
+
+      .timeline-container label {
+        font-size: 12px;
+      }
+
+      #timeSlider {
+        height: 5px;
+      }
+
+      #timeSlider::-webkit-slider-thumb {
+        width: 18px;
+        height: 18px;
+      }
+
+      .age-display {
+        font-size: 14px;
+        min-width: 48px;
+        padding: 1px 8px;
+      }
+
+      .audio-toggle {
+        top: 8px;
+        right: 12px;
+        padding: 4px 10px;
+        font-size: 12px;
+      }
+
+      .back-btn {
+        top: 12px;
+        left: 12px;
+        padding: 6px 14px;
+        font-size: 13px;
+      }
+
+      .level-indicator {
+        top: 8px;
+        right: 8px;
+        font-size: 10px;
+        padding: 3px 10px;
+      }
+
+      .station-marker {
+        width: 36px;
+        height: 36px;
+      }
+
+      .station-marker .seal {
+        font-size: 11px;
+      }
+
+      .spot-marker {
+        width: 30px;
+        height: 30px;
+      }
+
+      .spot-marker .spot-seal {
+        font-size: 9px;
+      }
+    }
+
+    /* 极小屏幕（宽度 < 400px）进一步适配 */
+    @media (max-width: 400px) {
+      .page-left {
+        height: 56.25vw;
+        max-height: 40vh;
+      }
+
+      .story-title {
+        font-size: 19px;
+      }
+
+      .poem-text {
+        font-size: 14px;
+      }
+
+      .story-text {
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <button class="audio-toggle" id="audioToggle">🌧️ 雨声 · 关</button>
+
+  <div class="book-wrapper" id="bookWrapper">
+    <div class="page-left">
+      <div id="mapContainer">
+        <canvas id="mapCanvas"></canvas>
+        <canvas id="microCanvas"></canvas>
+      </div>
+    </div>
+
+    <div class="page-right" id="storyPanel">
+      <!-- 内部滚动区：故事内容 -->
+      <div class="story-scroll" id="storyScroll">
+        <div class="story-header">
+          <span id="headerPlace">眉山</span>
+          <span class="date-tag" id="headerDate">1036年</span>
+        </div>
+        <div class="story-title" id="storyTitle">眉山 · 少年意气</div>
+        <div class="story-sub" id="storySub">人生到处知何似，应似飞鸿踏雪泥</div>
+
+        <div class="poem-box" id="poemBox">
+          <div class="poem-text" id="poemText">人生到处知何似，应似飞鸿踏雪泥。
+泥上偶然留指爪，鸿飞那复计东西。</div>
+          <div class="poem-source" id="poemSource">—— 苏轼《和子由渑池怀旧》</div>
+        </div>
+
+        <div class="story-text" id="storyText">
+          <p>宋仁宗景祐三年（1036年），苏轼生于眉州眉山。父亲苏洵，弟弟苏辙，父子三人皆以文章名世，世称“三苏”。少年苏轼在母亲程氏教导下读书，十岁便能写出奇绝之句，二十岁前已“学通经史，属文日数千言”。</p>
+          <p>眉山的三苏祠，至今仍存“三分水，二分竹”的岛居风貌。这里是苏轼人生画卷的起点——一个少年在此立下“奋厉有当世志”的宏愿，而后与父兄一同出蜀，奔赴汴京，走向他一生的风雨与旷达。</p>
+        </div>
+      </div>
+
+      <!-- 时间轴：固定在右页底部，独立于滚动区之外 -->
+      <div class="timeline-container">
+        <label>人生轨迹</label>
+        <input type="range" id="timeSlider" min="0" max="8" value="0" step="1">
+        <span class="age-display" id="ageDisplay">20岁</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const macroStations = [
+        {
+          id: 'meishan', name: '眉山', sealText: '眉山', year: '1036年', age: 20,
+          x: 0.18, y: 0.72,
+          title: '眉山 · 少年意气', sub: '人生到处知何似，应似飞鸿踏雪泥',
+          poem: '人生到处知何似，应似飞鸿踏雪泥。\n泥上偶然留指爪，鸿飞那复计东西。',
+          poemSource: '—— 苏轼《和子由渑池怀旧》',
+          story: `宋仁宗景祐三年（1036年），苏轼生于眉州眉山。父亲苏洵，弟弟苏辙，父子三人皆以文章名世，世称“三苏”。少年苏轼在母亲程氏教导下读书，十岁便能写出奇绝之句，二十岁前已“学通经史，属文日数千言”。\n\n眉山的三苏祠，至今仍存“三分水，二分竹”的岛居风貌。这里是苏轼人生画卷的起点——一个少年在此立下“奋厉有当世志”的宏愿，而后与父兄一同出蜀，奔赴汴京，走向他一生的风雨与旷达。`,
+          spots: [
+            { id: 'sansuci', name: '三苏祠', x: 0.45, y: 0.55, story: '三苏祠是苏轼父子三人的故居，明洪武年间改宅为祠，后世屡有增修。祠内古木参天，有“三分水，二分竹”之说。', poem: '门前万竿竹，堂上四库书。', poemSource: '—— 苏轼《答任师中家汉公》' },
+            { id: 'meishan_city', name: '眉山古城', x: 0.30, y: 0.40, story: '眉山古城墙、城门虽历经沧桑，仍可想象少年苏轼在此嬉戏游学的场景。', poem: '我昔在田间，但知羊与牛。', poemSource: '—— 苏轼《书晁说之考牧图后》' },
+            { id: 'minshan', name: '岷江畔', x: 0.65, y: 0.70, story: '岷江流经眉山，苏轼年少时常在江边读书散步，后来他写“我家江水初发源，宦游直送江入海”。', poem: '我家江水初发源，宦游直送江入海。', poemSource: '—— 苏轼《游金山寺》' }
+          ]
+        },
+        {
+          id: 'bianjing', name: '汴京', sealText: '汴京', year: '1057年', age: 22,
+          x: 0.48, y: 0.52,
+          title: '汴京 · 名动京师', sub: '奋厉有当世志',
+          poem: '人生到处知何似，应似飞鸿踏雪泥。',
+          poemSource: '—— 苏轼《和子由渑池怀旧》',
+          story: `嘉祐二年（1057年），二十一岁的苏轼与弟弟苏辙同榜进士及第。主考官欧阳修读到苏轼的《刑赏忠厚之至论》，惊叹不已，以为是自己门生曾巩所作，为避嫌置为第二。欧阳修后来对人说：“老夫当避路，放他出一头地也。”\n\n汴京的繁华与荣耀，是苏轼仕途的起点。然而母亲程氏病逝的消息传来，父子三人仓皇返蜀守丧。此后十年间，苏轼又经历了父亲苏洵的离世。那条“难于上青天”的蜀道，他一生走过三次。`,
+          spots: [
+            { id: 'ouyang', name: '欧阳修宅', x: 0.40, y: 0.45, story: '欧阳修是苏轼的座师，对苏轼极为赏识。苏轼曾回忆：“昔我先君怀宝遁世，非公则莫能致。”', poem: '醉翁之意不在酒，在乎山水之间也。', poemSource: '—— 欧阳修《醉翁亭记》' },
+            { id: 'xiangguosi', name: '相国寺', x: 0.60, y: 0.55, story: '大相国寺是汴京最繁华的寺庙，苏轼兄弟及第后曾在此游赏。', poem: '人间有味是清欢。', poemSource: '—— 苏轼《浣溪沙》' },
+            { id: 'jinmingchi', name: '金明池', x: 0.55, y: 0.38, story: '金明池是汴京皇家园林，苏轼年轻时曾在此游玩，后来他写“金明池上柳，别来几度春”。', poem: '金明池上柳，别来几度春。', poemSource: '—— 苏轼佚句' }
+          ]
+        },
+        {
+          id: 'hangzhou', name: '杭州', sealText: '杭州', year: '1071年', age: 36,
+          x: 0.62, y: 0.58,
+          title: '杭州 · 水光潋滟', sub: '欲把西湖比西子，淡妆浓抹总相宜',
+          poem: '水光潋滟晴方好，山色空蒙雨亦奇。\n欲把西湖比西子，淡妆浓抹总相宜。',
+          poemSource: '—— 苏轼《饮湖上初晴后雨》',
+          story: `熙宁四年（1071年），因与王安石变法主张不合，苏轼自请外放，通判杭州。这是他第一次到杭州，一住便是三年。他走遍杭州的山山水水，写下大量诗篇。\n\n十八年后，苏轼以龙图阁学士出知杭州。这一次，他疏浚西湖，用挖出的葑草淤泥筑成一道长堤——苏堤。杭州人至今感念“老市长”，西湖边有苏东坡纪念馆，供后人追思。`,
+          spots: [
+            { id: 'sudi', name: '苏堤', x: 0.48, y: 0.58, story: '元祐五年（1090年），苏轼疏浚西湖，以葑草淤泥筑堤，南起南屏山，北至栖霞岭，全长近三公里。后人命名为“苏堤”。', poem: '六桥横绝天汉上，北山始与南屏通。', poemSource: '—— 苏轼《轼在颍州与赵德麟同治西湖》' },
+            { id: 'xihu', name: '西湖', x: 0.45, y: 0.50, story: '苏轼在杭州期间写下大量西湖诗，最著名的便是《饮湖上初晴后雨》。西湖因苏轼而更具人文底蕴。', poem: '水光潋滟晴方好，山色空蒙雨亦奇。', poemSource: '—— 苏轼《饮湖上初晴后雨》' },
+            { id: 'lingyinsi', name: '灵隐寺', x: 0.38, y: 0.62, story: '灵隐寺是杭州名刹，苏轼曾多次游览，与僧人交往。他写“溪山处处皆可庐，最爱灵隐飞来孤”。', poem: '溪山处处皆可庐，最爱灵隐飞来孤。', poemSource: '—— 苏轼《游灵隐寺》' }
+          ]
+        },
+        {
+          id: 'mizhou', name: '密州', sealText: '密州', year: '1074年', age: 39,
+          x: 0.58, y: 0.42,
+          title: '密州 · 超然台上', sub: '但愿人长久，千里共婵娟',
+          poem: '明月几时有？把酒问青天。\n不知天上宫阙，今夕是何年。\n我欲乘风归去，又恐琼楼玉宇，高处不胜寒。\n起舞弄清影，何似在人间。\n\n转朱阁，低绮户，照无眠。\n不应有恨，何事长向别时圆？\n人有悲欢离合，月有阴晴圆缺，此事古难全。\n但愿人长久，千里共婵娟。',
+          poemSource: '—— 苏轼《水调歌头·明月几时有》',
+          story: `熙宁七年（1074年），苏轼调知密州。密州贫瘠，连年灾荒，苏轼到任后“洒涕循城拾弃孩”，尽力赈济。他修葺城北旧台，弟弟苏辙名之曰“超然”，取“无所往而不乐”之意。\n\n熙宁九年中秋，苏轼在超然台上欢饮达旦，大醉，作《水调歌头》兼怀子由。南宋胡仔评：“中秋词，自东坡《水调歌头》一出，余词尽废。”`,
+          spots: [
+            { id: 'chaorantai', name: '超然台', x: 0.50, y: 0.45, story: '超然台是苏轼在密州所建，苏辙命名。苏轼常与友人登台饮酒赋诗，写下《超然台记》及大量诗篇。', poem: '超然台上看，半壕春水一城花。', poemSource: '—— 苏轼《望江南·超然台作》' },
+            { id: 'mizhou_city', name: '密州城', x: 0.40, y: 0.60, story: '苏轼在密州赈灾济民，深得民心。他离任时，百姓夹道相送。', poem: '为报倾城随太守，亲射虎，看孙郎。', poemSource: '—— 苏轼《江城子·密州出猎》' },
+            { id: 'changshan', name: '常山', x: 0.65, y: 0.35, story: '常山在密州城南，苏轼曾在此祈雨，并写有《常山祈雨文》。', poem: '常山山神，其亦有意于斯民乎？', poemSource: '—— 苏轼《常山祈雨文》' }
+          ]
+        },
+        {
+          id: 'xuzhou', name: '徐州', sealText: '徐州', year: '1077年', age: 42,
+          x: 0.55, y: 0.46,
+          title: '徐州 · 抗洪守城', sub: '贤者不悲其身之死，而忧其国之衰',
+          poem: '暮云收尽溢清寒，银汉无声转玉盘。\n此生此夜不长好，明月明年何处看。',
+          poemSource: '—— 苏轼《阳关曲·中秋月》',
+          story: `熙宁十年（1077年），苏轼知徐州。到任不久，黄河决口，洪水围城。苏轼“庐于城上，过家不入”，与军民一同抗洪数十日，最终保全城池。\n\n徐州百姓感其恩德，纷纷杀猪宰羊慰劳。苏轼推辞不掉，便亲自指点家人制成红烧肉回赠百姓，这便是“东坡肉”的民间传说之一。`,
+          spots: [
+            { id: 'xuzhou_citywall', name: '徐州城墙', x: 0.45, y: 0.50, story: '熙宁十年黄河决口，苏轼在城墙上搭棚居住，指挥抗洪，最终保全徐州城。', poem: '黄河西来决昆仑，咆哮万里触龙门。', poemSource: '—— 苏轼《黄河》' },
+            { id: 'yunlongshan', name: '云龙山', x: 0.55, y: 0.62, story: '云龙山是徐州名胜，苏轼常在此游览，与隐士张天骥交往，写有《放鹤亭记》。', poem: '鹤飞去兮西山之缺，高翔而下览兮择所适。', poemSource: '—— 苏轼《放鹤亭记》' },
+            { id: 'kuairan', name: '快哉亭', x: 0.35, y: 0.40, story: '快哉亭是苏轼在徐州所建，他常在此观景，后由苏辙作《快哉亭记》。', poem: '一点浩然气，千里快哉风。', poemSource: '—— 苏轼《水调歌头·黄州快哉亭赠张偓佺》' }
+          ]
+        },
+        {
+          id: 'huangzhou', name: '黄州', sealText: '黄州', year: '1080年', age: 45,
+          x: 0.42, y: 0.62,
+          title: '黄州 · 东坡居士', sub: '一蓑烟雨任平生',
+          poem: '莫听穿林打叶声，何妨吟啸且徐行。\n竹杖芒鞋轻胜马，谁怕？一蓑烟雨任平生。\n\n料峭春风吹酒醒，微冷，山头斜照却相迎。\n回首向来萧瑟处，归去，也无风雨也无晴。',
+          poemSource: '—— 苏轼《定风波·莫听穿林打叶声》',
+          story: `元丰二年（1079年），乌台诗案爆发，苏轼被贬为黄州团练副使，不得签书公事。初到黄州，他寓居定惠院，生活困顿。老友马正卿为他求得城东营防废地数十亩，苏轼开荒耕种，自号“东坡居士”。\n\n正是在黄州，苏轼完成了从“苏轼”到“苏东坡”的蜕变。他写《赤壁赋》，作《念奴娇·赤壁怀古》，在困顿中淬炼出旷达。他说：“某谪居既久，安土忘怀，一如本是黄州人，元不出仕而已。”`,
+          spots: [
+            { id: 'chibiji', name: '东坡赤壁', x: 0.50, y: 0.45, story: '东坡赤壁是苏轼黄州时期最重要的地点，他在此写下前后《赤壁赋》和《念奴娇·赤壁怀古》。', poem: '大江东去，浪淘尽，千古风流人物。', poemSource: '—— 苏轼《念奴娇·赤壁怀古》' },
+            { id: 'dongpotian', name: '东坡雪堂', x: 0.35, y: 0.60, story: '雪堂是苏轼在黄州东坡所建的居所，因在大雪中建成而得名。他自号“东坡居士”即源于此。', poem: '雪堂西畔暗泉鸣，北山倾，小溪横。', poemSource: '—— 苏轼《江城子》' },
+            { id: 'dinghuiyuan', name: '定惠院', x: 0.60, y: 0.55, story: '定惠院是苏轼初到黄州时的寓居之所，他在此写下《定惠院海棠》诗。', poem: '江城地瘴蕃草木，只有名花苦幽独。', poemSource: '—— 苏轼《定惠院海棠》' }
+          ]
+        },
+        {
+          id: 'huizhou', name: '惠州', sealText: '惠州', year: '1094年', age: 59,
+          x: 0.52, y: 0.78,
+          title: '惠州 · 岭南谪居', sub: '日啖荔枝三百颗，不辞长作岭南人',
+          poem: '罗浮山下四时春，卢橘杨梅次第新。\n日啖荔枝三百颗，不辞长作岭南人。',
+          poemSource: '—— 苏轼《惠州一绝》',
+          story: `绍圣元年（1094年），新党再度执政，苏轼被贬为宁远军节度副使，惠州安置。年近六旬的苏轼翻越大庾岭，来到岭南。\n\n惠州瘴疠之地，苏轼却随遇而安。他写荔枝，写松风亭，写“报道先生春睡美，道人轻打五更钟”。据说宰相章惇读到此诗，冷笑一声：“苏子瞻尚尔快活耶？”于是再贬儋州。`,
+          spots: [
+            { id: 'hejianglou', name: '合江楼', x: 0.45, y: 0.55, story: '合江楼是惠州东江与西枝江交汇处的名楼，苏轼初到惠州时曾在此暂住。', poem: '海山葱茏气佳哉，二江合处朱楼开。', poemSource: '—— 苏轼《寓居合江楼》' },
+            { id: 'songfengting', name: '松风亭', x: 0.55, y: 0.40, story: '松风亭在惠州白水山，苏轼常在此游玩，写有《记游松风亭》。', poem: '余尝寓居惠州嘉祐寺，纵步松风亭下。', poemSource: '—— 苏轼《记游松风亭》' },
+            { id: 'dongpo_huizhou', name: '东坡祠', x: 0.35, y: 0.65, story: '惠州东坡祠是后人为纪念苏轼而建，他在惠州推广农业，关心民生。', poem: '一自坡公谪南海，天下不敢小惠州。', poemSource: '—— 清·江逢辰' }
+          ]
+        },
+        {
+          id: 'danzhou', name: '儋州', sealText: '儋州', year: '1097年', age: 62,
+          x: 0.48, y: 0.88,
+          title: '儋州 · 天涯海角', sub: '九死南荒吾不恨，兹游奇绝冠平生',
+          poem: '参横斗转欲三更，苦雨终风也解晴。\n云散月明谁点缀？天容海色本澄清。\n空余鲁叟乘桴意，粗识轩辕奏乐声。\n九死南荒吾不恨，兹游奇绝冠平生。',
+          poemSource: '—— 苏轼《六月二十日夜渡海》',
+          story: `绍圣四年（1097年），六十二岁的苏轼被贬儋州（今海南儋州）。在宋代，放逐海南是仅次于满门抄斩的惩罚。苏轼与幼子苏过相依为命，住在桄榔林中搭建的草庵里。\n\n然而他并未消沉。他在儋州办学讲课，海南“书声琅琅，弦声四起”。当地人感念其教化之功，载酒堂、东坡书院至今犹存。北归时他写道：“我本海南民，寄生西蜀州。”`,
+          spots: [
+            { id: 'zaiiangtang', name: '载酒堂', x: 0.45, y: 0.50, story: '载酒堂是苏轼在儋州讲学之所，后人扩建为东坡书院。', poem: '他年谁作舆地志，海南万里真吾乡。', poemSource: '—— 苏轼《吾谪海南》' },
+            { id: 'taohuayuan', name: '桄榔庵', x: 0.55, y: 0.60, story: '桄榔庵是苏轼在儋州的居所，因周围多桄榔树而得名。', poem: '九死南荒吾不恨，兹游奇绝冠平生。', poemSource: '—— 苏轼《六月二十日夜渡海》' },
+            { id: 'tianya', name: '天涯海角', x: 0.35, y: 0.70, story: '天涯海角在儋州附近，苏轼贬谪海南，如同到了天涯海角。', poem: '天涯何处无芳草。', poemSource: '—— 苏轼《蝶恋花》' }
+          ]
+        },
+        {
+          id: 'changzhou', name: '常州', sealText: '常州', year: '1101年', age: 66,
+          x: 0.58, y: 0.52,
+          title: '常州 · 此心安处', sub: '问汝平生功业，黄州惠州儋州',
+          poem: '心似已灰之木，身如不系之舟。\n问汝平生功业，黄州惠州儋州。',
+          poemSource: '—— 苏轼《自题金山画像》',
+          story: `建中靖国元年（1101年），苏轼遇赦北归，途经常州时病重。他一生漂泊，最终在常州孙氏馆中走完了六十六年的人生。临终前，维琳方丈在他耳边大声说：“端明宜忘西方！”苏轼微声答道：“西方不无，但个里着力不得。”\n\n苏辙在《亡兄子瞻端明墓志铭》中写道：“公之于文，得之于天。”而苏轼自己说：“问汝平生功业，黄州惠州儋州。”那些贬谪之地，恰恰成就了千古东坡。`,
+          spots: [
+            { id: 'sunshiguan', name: '孙氏馆', x: 0.50, y: 0.50, story: '孙氏馆是苏轼在常州病逝之处，他在此走完了六十六年的人生。', poem: '此心安处是吾乡。', poemSource: '—— 苏轼《定风波》' },
+            { id: 'tenghuage', name: '藤花旧馆', x: 0.40, y: 0.60, story: '藤花旧馆是后人为纪念苏轼而建，位于常州。', poem: '问汝平生功业，黄州惠州儋州。', poemSource: '—— 苏轼《自题金山画像》' },
+            { id: 'changzhou_city', name: '常州古城', x: 0.60, y: 0.40, story: '苏轼一生多次到常州，曾上表请求常州居住，最终终老于此。', poem: '买田阳羡吾将老，从来只为溪山好。', poemSource: '—— 苏轼《菩萨蛮》' }
+          ]
+        }
+      ];
+
+      let mapLevel = 0;
+      let currentMacroIndex = 0;
+      let currentSpotIndex = 0;
+      let revealedCount = 1;
+
+      const mapContainer = document.getElementById('mapContainer');
+      const storyScroll = document.getElementById('storyScroll');
+      const headerPlace = document.getElementById('headerPlace');
+      const headerDate = document.getElementById('headerDate');
+      const storyTitle = document.getElementById('storyTitle');
+      const storySub = document.getElementById('storySub');
+      const poemText = document.getElementById('poemText');
+      const poemSource = document.getElementById('poemSource');
+      const storyText = document.getElementById('storyText');
+      const timeSlider = document.getElementById('timeSlider');
+      const ageDisplay = document.getElementById('ageDisplay');
+      const audioToggle = document.getElementById('audioToggle');
+
+      let backBtn = null;
+      let levelIndicator = null;
+
+      let audioCtx = null;
+      let rainSource = null;
+      let rainPlaying = false;
+
+      const macroCanvas = document.getElementById('mapCanvas');
+      const microCanvas = document.getElementById('microCanvas');
+      const macroCtx = macroCanvas.getContext('2d');
+      const microCtx = microCanvas.getContext('2d');
+
+      function resizeCanvases() {
+        const rect = mapContainer.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        [macroCanvas, microCanvas].forEach(c => {
+          c.width = rect.width * dpr;
+          c.height = rect.height * dpr;
+          c.style.width = rect.width + 'px';
+          c.style.height = rect.height + 'px';
+        });
+        macroCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        microCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function drawMacroMap() {
+        const w = macroCanvas.width / (window.devicePixelRatio || 1);
+        const h = macroCanvas.height / (window.devicePixelRatio || 1);
+        macroCtx.clearRect(0, 0, w, h);
+
+        macroCtx.fillStyle = '#f0e4d0';
+        macroCtx.fillRect(0, 0, w, h);
+
+        for (let i = 0; i < 200; i++) {
+          macroCtx.fillStyle = `rgba(180, 150, 110, ${Math.random() * 0.06})`;
+          macroCtx.beginPath();
+          macroCtx.arc(Math.random() * w, Math.random() * h, Math.random() * 3 + 0.5, 0, Math.PI * 2);
+          macroCtx.fill();
+        }
+
+        macroCtx.strokeStyle = 'rgba(140, 120, 90, 0.25)';
+        macroCtx.lineWidth = 1.5;
+        for (let k = 0; k < 6; k++) {
+          macroCtx.beginPath();
+          let startX = w * (0.08 + k * 0.15);
+          let startY = h * 0.15;
+          macroCtx.moveTo(startX, startY);
+          for (let t = 0; t < 1; t += 0.05) {
+            let x = startX + Math.sin(t * 8 + k) * 30 + t * 80;
+            let y = startY + t * h * 0.7 + Math.cos(t * 6 + k) * 15;
+            macroCtx.lineTo(x, y);
+          }
+          macroCtx.stroke();
+        }
+
+        macroCtx.beginPath();
+        macroCtx.strokeStyle = 'rgba(100, 130, 160, 0.3)';
+        macroCtx.lineWidth = 6;
+        macroCtx.moveTo(w * 0.05, h * 0.5);
+        macroCtx.bezierCurveTo(w * 0.3, h * 0.35, w * 0.5, h * 0.55, w * 0.75, h * 0.45);
+        macroCtx.bezierCurveTo(w * 0.85, h * 0.4, w * 0.95, h * 0.48, w * 0.98, h * 0.5);
+        macroCtx.stroke();
+
+        macroCtx.beginPath();
+        macroCtx.strokeStyle = 'rgba(160, 130, 80, 0.3)';
+        macroCtx.lineWidth = 4;
+        macroCtx.moveTo(w * 0.15, h * 0.3);
+        macroCtx.bezierCurveTo(w * 0.25, h * 0.25, w * 0.4, h * 0.3, w * 0.5, h * 0.38);
+        macroCtx.bezierCurveTo(w * 0.6, h * 0.45, w * 0.7, h * 0.42, w * 0.8, h * 0.45);
+        macroCtx.stroke();
+
+        if (revealedCount >= 2) {
+          const points = [];
+          for (let i = 0; i < revealedCount; i++) {
+            const s = macroStations[i];
+            points.push({ x: s.x * w, y: s.y * h });
+          }
+          if (points.length >= 2) {
+            macroCtx.save();
+            macroCtx.setLineDash([8, 10]);
+            macroCtx.lineWidth = 3;
+            macroCtx.strokeStyle = 'rgba(180, 70, 40, 0.7)';
+            macroCtx.shadowColor = 'rgba(200, 120, 60, 0.5)';
+            macroCtx.shadowBlur = 8;
+            macroCtx.beginPath();
+            macroCtx.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) {
+              const prev = points[i - 1];
+              const curr = points[i];
+              const cp1x = prev.x + (curr.x - prev.x) * 0.3;
+              const cp1y = prev.y - 20;
+              const cp2x = prev.x + (curr.x - prev.x) * 0.7;
+              const cp2y = curr.y + 20;
+              macroCtx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, curr.x, curr.y);
+            }
+            macroCtx.stroke();
+            macroCtx.restore();
+
+            points.forEach((p, idx) => {
+              if (idx === 0 || idx === revealedCount - 1) return;
+              macroCtx.beginPath();
+              macroCtx.fillStyle = '#b34a3a';
+              macroCtx.shadowBlur = 12;
+              macroCtx.shadowColor = 'rgba(180, 70, 40, 0.6)';
+              macroCtx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+              macroCtx.fill();
+              macroCtx.shadowBlur = 0;
+            });
+          }
+        }
+      }
+
+      function drawMicroMap() {
+        const w = microCanvas.width / (window.devicePixelRatio || 1);
+        const h = microCanvas.height / (window.devicePixelRatio || 1);
+        microCtx.clearRect(0, 0, w, h);
+
+        microCtx.fillStyle = '#f0e4d0';
+        microCtx.fillRect(0, 0, w, h);
+
+        for (let i = 0; i < 150; i++) {
+          microCtx.fillStyle = `rgba(200, 180, 150, ${Math.random() * 0.1})`;
+          microCtx.beginPath();
+          microCtx.ellipse(Math.random() * w, Math.random() * h, Math.random() * 20 + 5, Math.random() * 10 + 2, Math.random() * Math.PI, 0, Math.PI * 2);
+          microCtx.fill();
+        }
+
+        const macro = macroStations[currentMacroIndex];
+        microCtx.strokeStyle = 'rgba(120, 100, 70, 0.2)';
+        microCtx.lineWidth = 1;
+
+        if (macro.id === 'hangzhou') {
+          microCtx.beginPath();
+          microCtx.strokeStyle = 'rgba(100, 140, 180, 0.35)';
+          microCtx.lineWidth = 8;
+          microCtx.ellipse(w * 0.5, h * 0.52, w * 0.3, h * 0.25, 0, 0, Math.PI * 2);
+          microCtx.stroke();
+          microCtx.beginPath();
+          microCtx.strokeStyle = 'rgba(80, 120, 80, 0.4)';
+          microCtx.lineWidth = 6;
+          microCtx.moveTo(w * 0.3, h * 0.65);
+          microCtx.bezierCurveTo(w * 0.4, h * 0.55, w * 0.55, h * 0.5, w * 0.7, h * 0.45);
+          microCtx.stroke();
+        } else if (macro.id === 'huangzhou') {
+          microCtx.beginPath();
+          microCtx.strokeStyle = 'rgba(140, 100, 70, 0.4)';
+          microCtx.lineWidth = 10;
+          microCtx.moveTo(w * 0.2, h * 0.7);
+          microCtx.bezierCurveTo(w * 0.3, h * 0.4, w * 0.5, h * 0.35, w * 0.7, h * 0.6);
+          microCtx.stroke();
+          microCtx.beginPath();
+          microCtx.strokeStyle = 'rgba(100, 140, 180, 0.3)';
+          microCtx.lineWidth = 12;
+          microCtx.moveTo(w * 0.05, h * 0.55);
+          microCtx.bezierCurveTo(w * 0.3, h * 0.5, w * 0.7, h * 0.6, w * 0.95, h * 0.55);
+          microCtx.stroke();
+        } else if (macro.id === 'meishan') {
+          for (let i = 0; i < 20; i++) {
+            microCtx.beginPath();
+            microCtx.strokeStyle = 'rgba(80, 120, 60, 0.2)';
+            microCtx.lineWidth = 3;
+            let x = w * (0.1 + Math.random() * 0.8);
+            let y = h * (0.2 + Math.random() * 0.7);
+            microCtx.moveTo(x, y);
+            microCtx.lineTo(x + Math.sin(i) * 15, y - 30 - Math.random() * 20);
+            microCtx.stroke();
+          }
+        } else {
+          for (let i = 0; i < 8; i++) {
+            microCtx.beginPath();
+            microCtx.strokeStyle = 'rgba(140, 120, 90, 0.15)';
+            microCtx.lineWidth = 2;
+            let y = h * (0.1 + i * 0.1);
+            microCtx.moveTo(w * 0.1, y);
+            microCtx.lineTo(w * 0.9, y + Math.sin(i) * 10);
+            microCtx.stroke();
+          }
+        }
+      }
+
+      function createMacroMarkers() {
+        document.querySelectorAll('.station-marker, .spot-marker').forEach(el => el.remove());
+        macroStations.forEach((station, index) => {
+          const marker = document.createElement('div');
+          marker.className = 'station-marker';
+          marker.dataset.index = index;
+          marker.style.left = (station.x * 100) + '%';
+          marker.style.top = (station.y * 100) + '%';
+          marker.innerHTML = `<div class="seal">${station.sealText}</div>`;
+          marker.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (index >= revealedCount) revealedCount = index + 1;
+            enterMicroView(index);
+          });
+          mapContainer.appendChild(marker);
+        });
+        updateMacroMarkerStates();
+      }
+
+      function updateMacroMarkerStates() {
+        document.querySelectorAll('.station-marker').forEach((el, i) => {
+          const idx = parseInt(el.dataset.index);
+          if (i < revealedCount) {
+            el.style.opacity = '1';
+          } else {
+            el.style.opacity = '0.4';
+          }
+          if (idx === currentMacroIndex && mapLevel === 0) {
+            el.classList.add('active');
+          } else {
+            el.classList.remove('active');
+          }
+        });
+      }
+
+      function enterMicroView(macroIndex) {
+        currentMacroIndex = macroIndex;
+        mapLevel = 1;
+        currentSpotIndex = 0;
+        revealedCount = Math.max(revealedCount, macroIndex + 1);
+
+        timeSlider.value = macroIndex;
+        ageDisplay.textContent = macroStations[macroIndex].age + '岁';
+
+        macroCanvas.classList.add('macro-hidden');
+        microCanvas.classList.add('show');
+
+        resizeCanvases();
+        drawMicroMap();
+
+        document.querySelectorAll('.station-marker').forEach(el => el.remove());
+        createMicroMarkers(macroIndex);
+
+        showBackButton();
+        updateLevelIndicator('城 · ' + macroStations[macroIndex].name);
+
+        const spots = macroStations[macroIndex].spots;
+        if (spots && spots.length > 0) {
+          showSpotStory(macroIndex, 0);
+        } else {
+          showMacroStory(macroIndex);
+        }
+      }
+
+      function backToMacro() {
+        mapLevel = 0;
+
+        microCanvas.classList.remove('show');
+        macroCanvas.classList.remove('macro-hidden');
+
+        resizeCanvases();
+        drawMacroMap();
+
+        document.querySelectorAll('.spot-marker').forEach(el => el.remove());
+        hideBackButton();
+        createMacroMarkers();
+        showMacroStory(currentMacroIndex);
+        updateLevelIndicator('国 · 大宋疆域');
+        updateMacroMarkerStates();
+      }
+
+      function createMicroMarkers(macroIndex) {
+        document.querySelectorAll('.spot-marker').forEach(el => el.remove());
+        const spots = macroStations[macroIndex].spots || [];
+        spots.forEach((spot, index) => {
+          const marker = document.createElement('div');
+          marker.className = 'spot-marker';
+          marker.dataset.index = index;
+          marker.style.left = (spot.x * 100) + '%';
+          marker.style.top = (spot.y * 100) + '%';
+          marker.innerHTML = `<div class="spot-seal">${spot.name}</div>`;
+          marker.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentSpotIndex = index;
+            showSpotStory(macroIndex, index);
+            document.querySelectorAll('.spot-marker').forEach(m => m.classList.remove('active'));
+            marker.classList.add('active');
+          });
+          mapContainer.appendChild(marker);
+        });
+        const firstSpot = document.querySelector('.spot-marker');
+        if (firstSpot) firstSpot.classList.add('active');
+      }
+
+      function showMacroStory(index) {
+        const s = macroStations[index];
+        headerPlace.textContent = s.name;
+        headerDate.textContent = s.year;
+        storyTitle.textContent = s.title;
+        storySub.textContent = s.sub;
+        poemText.textContent = s.poem;
+        poemSource.textContent = s.poemSource;
+        storyText.innerHTML = s.story.split('\n\n').map(p => `<p>${p}</p>`).join('');
+        storyScroll.scrollTo({ top: 0, behavior: 'smooth' });
+        animateStoryPanel();
+      }
+
+      function showSpotStory(macroIndex, spotIndex) {
+        const macro = macroStations[macroIndex];
+        const spot = macro.spots[spotIndex];
+        if (!spot) return;
+
+        headerPlace.textContent = macro.name + ' · ' + spot.name;
+        headerDate.textContent = macro.year;
+        storyTitle.textContent = spot.name + ' · ' + macro.name;
+        storySub.textContent = macro.sub;
+        poemText.textContent = spot.poem || macro.poem;
+        poemSource.textContent = spot.poemSource || macro.poemSource;
+        storyText.innerHTML = `<p>${spot.story}</p><p>${macro.story.split('\n\n')[0]}</p>`;
+        storyScroll.scrollTo({ top: 0, behavior: 'smooth' });
+        animateStoryPanel();
+      }
+
+      function animateStoryPanel() {
+        storyScroll.classList.remove('animate');
+        void storyScroll.offsetWidth;
+        storyScroll.classList.add('animate');
+        storyScroll.classList.remove('ink-flash');
+        void storyScroll.offsetWidth;
+        storyScroll.classList.add('ink-flash');
+      }
+
+      function showBackButton() {
+        if (!backBtn) {
+          backBtn = document.createElement('button');
+          backBtn.className = 'back-btn';
+          backBtn.innerHTML = '← 返回全图';
+          backBtn.addEventListener('click', backToMacro);
+          document.body.appendChild(backBtn);
+        }
+        backBtn.classList.add('show');
+      }
+
+      function hideBackButton() {
+        if (backBtn) backBtn.classList.remove('show');
+      }
+
+      function updateLevelIndicator(text) {
+        if (!levelIndicator) {
+          levelIndicator = document.createElement('div');
+          levelIndicator.className = 'level-indicator';
+          mapContainer.appendChild(levelIndicator);
+        }
+        levelIndicator.textContent = text;
+      }
+
+      timeSlider.addEventListener('input', (e) => {
+        const idx = parseInt(e.target.value);
+        revealedCount = idx + 1;
+        currentMacroIndex = idx;
+        if (mapLevel === 0) {
+          updateMacroMarkerStates();
+          drawMacroMap();
+          showMacroStory(idx);
+        } else {
+          enterMicroView(idx);
+        }
+        ageDisplay.textContent = macroStations[idx].age + '岁';
+      });
+
+      function createRainSound() {
+        if (audioCtx) return;
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const bufferSize = audioCtx.sampleRate * 2;
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        let last = 0;
+        for (let i = 0; i < bufferSize; i++) {
+          const white = Math.random() * 2 - 1;
+          last = (last + 0.02 * white) / 1.02;
+          data[i] = last * 3.5;
+        }
+        rainSource = audioCtx.createBufferSource();
+        rainSource.buffer = buffer;
+        rainSource.loop = true;
+        const gainNode = audioCtx.createGain();
+        gainNode.gain.value = 0.15;
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 1200;
+        rainSource.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        rainSource.start(0);
+      }
+
+      audioToggle.addEventListener('click', () => {
+        if (!audioCtx) {
+          createRainSound();
+          rainPlaying = true;
+          audioToggle.classList.add('active');
+          audioToggle.textContent = '🌧️ 雨声 · 开';
+          if (audioCtx.state === 'suspended') audioCtx.resume();
+          return;
+        }
+        if (rainPlaying) {
+          if (audioCtx.state === 'running') audioCtx.suspend();
+          rainPlaying = false;
+          audioToggle.classList.remove('active');
+          audioToggle.textContent = '🌧️ 雨声 · 关';
+        } else {
+          if (audioCtx.state === 'suspended') audioCtx.resume();
+          rainPlaying = true;
+          audioToggle.classList.add('active');
+          audioToggle.textContent = '🌧️ 雨声 · 开';
+        }
+      });
+
+      function init() {
+        mapLevel = 0;
+        currentMacroIndex = 0;
+        revealedCount = 1;
+
+        resizeCanvases();
+        drawMacroMap();
+        createMacroMarkers();
+        showMacroStory(0);
+
+        microCanvas.classList.remove('show');
+        macroCanvas.classList.remove('macro-hidden');
+
+        timeSlider.value = 0;
+        ageDisplay.textContent = macroStations[0].age + '岁';
+        updateLevelIndicator('国 · 大宋疆域');
+
+        window.addEventListener('resize', () => {
+          resizeCanvases();
+          if (mapLevel === 0) {
+            drawMacroMap();
+          } else {
+            drawMicroMap();
+          }
+        });
+      }
+
+      window.addEventListener('load', () => setTimeout(init, 60));
+      if (document.readyState === 'complete') setTimeout(init, 60);
+    })();
+  </script>
+</body>
+</html>
