@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>苏东坡 · 人生轨迹 · 古风手绘卷轴</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background: #2e1e0f;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'KaiTi', '楷体', 'STKaiti', '华文楷体', 'Times New Roman', serif;
+            padding: 16px;
+        }
+
+        .scroll-container {
+            position: relative;
+            width: 100%;
+            max-width: 1200px;
+            background: #e8d5b5;
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(200, 170, 130, 0.15) 0%, transparent 30%),
+                radial-gradient(circle at 80% 70%, rgba(180, 150, 110, 0.2) 0%, transparent 40%),
+                repeating-linear-gradient(45deg, rgba(160, 130, 90, 0.03) 0px, rgba(160, 130, 90, 0.03) 2px, transparent 2px, transparent 6px);
+            border-radius: 8px;
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.6),
+                inset 0 0 80px rgba(120, 90, 60, 0.3);
+            padding: 30px 20px 20px 20px;
+            border: 1px solid #b89a7a;
+        }
+
+        .scroll-container::before,
+        .scroll-container::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 22px;
+            background: linear-gradient(to bottom, #5a3e2b, #3e2a1c);
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,215,160,0.3);
+            z-index: 10;
+        }
+        .scroll-container::before { top: -10px; }
+        .scroll-container::after { bottom: -10px; }
+
+        .main-content {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .header-title {
+            text-align: center;
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: #3a281a;
+            letter-spacing: 8px;
+            text-shadow: 2px 2px 0 rgba(200, 170, 130, 0.5);
+            margin-bottom: 4px;
+            font-family: 'STKaiti', 'KaiTi', cursive;
+            transform: rotate(-0.5deg);
+        }
+        .header-title small {
+            font-size: 1rem;
+            letter-spacing: 4px;
+            color: #6b4e32;
+            display: block;
+            margin-top: 4px;
+        }
+
+        /* ========== 地图区域（带北宋地形图背景） ========== */
+        .map-wrapper {
+            position: relative;
+            width: 100%;
+            background: #e8d5b5;
+            border-radius: 20px;
+            padding: 8px;
+            box-shadow: inset 0 0 30px rgba(100, 70, 40, 0.2);
+            border: 2px solid #b89a7a;
+            overflow: hidden;
+        }
+
+        #mapSvg {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 14px;
+            filter: drop-shadow(0 4px 6px rgba(80, 50, 20, 0.3));
+        }
+
+        /* 站点印章 */
+        .station-group {
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        .station-group:hover { transform: scale(1.1); }
+        .station-group .seal {
+            fill: #b22222;
+            stroke: #5a1e1e;
+            stroke-width: 1.5;
+            filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.4));
+            transition: fill 0.3s, filter 0.3s;
+        }
+        .station-group:hover .seal {
+            fill: #d43f3f;
+            filter: drop-shadow(0 0 8px #ffaa66);
+        }
+        .station-group .seal-text {
+            fill: #f5e6d3;
+            font-size: 9px;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            font-family: 'STKaiti', 'KaiTi', serif;
+            font-weight: bold;
+            pointer-events: none;
+        }
+
+        .route-path {
+            fill: none;
+            stroke: #7a5a3a;
+            stroke-width: 2.5;
+            stroke-dasharray: 8 6;
+            stroke-linecap: round;
+            opacity: 0.6;
+            transition: opacity 0.3s;
+        }
+        .route-path.active {
+            stroke: #b8860b;
+            stroke-width: 3.5;
+            opacity: 1;
+            filter: drop-shadow(0 0 6px #d4a017);
+        }
+
+        /* ========== 信息卡片 ========== */
+        .info-card {
+            background: #fbf3e0;
+            background-image: linear-gradient(to bottom, #fdf8ed, #f3e8d5);
+            border: 1px solid #c9aa7b;
+            border-radius: 4px;
+            padding: 18px 22px;
+            box-shadow: 0 10px 20px rgba(60, 40, 20, 0.3), inset 0 0 30px rgba(200, 170, 120, 0.2);
+            position: relative;
+            min-height: 180px;
+            transition: opacity 0.35s ease, transform 0.35s ease;
+            opacity: 1;
+            transform: translateY(0);
+            overflow: hidden;
+        }
+        .info-card.hidden {
+            opacity: 0;
+            transform: translateY(10px);
+            pointer-events: none;
+        }
+        .card-body {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: relative;
+            z-index: 2;
+            animation: fadeUp 0.4s ease-out;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .info-card::before {
+            content: '';
+            position: absolute;
+            top: 10px; bottom: 10px; left: 8px;
+            width: 2px;
+            background: repeating-linear-gradient(to bottom, #dbb88c, #dbb88c 4px, transparent 4px, transparent 8px);
+            opacity: 0.5;
+        }
+        .info-card::after {
+            content: '';
+            position: absolute;
+            top: 10px; bottom: 10px; right: 8px;
+            width: 2px;
+            background: repeating-linear-gradient(to bottom, #dbb88c, #dbb88c 4px, transparent 4px, transparent 8px);
+            opacity: 0.5;
+        }
+
+        .card-title {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #3a281a;
+            font-family: 'STKaiti', 'KaiTi', cursive;
+            border-bottom: 2px solid #c9aa7b;
+            padding-bottom: 6px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            transform: rotate(-0.3deg);
+        }
+        .card-title .age-badge {
+            font-size: 0.9rem;
+            background: #c9aa7b;
+            color: #2e1e0f;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-family: 'KaiTi', serif;
+        }
+        .story-text {
+            font-size: 1.1rem;
+            line-height: 1.7;
+            color: #2e1e0f;
+            text-indent: 2em;
+            font-family: 'KaiTi', 'STKaiti', serif;
+        }
+        .poem-box {
+            background: rgba(220, 200, 170, 0.3);
+            border-left: 4px solid #b8860b;
+            padding: 12px 16px;
+            border-radius: 0 8px 8px 0;
+            margin-top: 6px;
+            font-style: italic;
+        }
+        .poem-text {
+            font-size: 1rem;
+            line-height: 1.8;
+            color: #3a2a1a;
+            white-space: pre-line;
+            font-family: 'STKaiti', 'KaiTi', serif;
+        }
+        .poem-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .btn-read {
+            background: transparent;
+            border: 1px solid #b8860b;
+            color: #5a3e2b;
+            padding: 4px 16px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'KaiTi', serif;
+        }
+        .btn-read:hover {
+            background: #b8860b;
+            color: #fdf8ed;
+        }
+
+        /* 时间轴 */
+        .timeline-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(200, 175, 140, 0.3);
+            padding: 10px 16px;
+            border-radius: 40px;
+            margin-top: 6px;
+            border: 1px solid #b89a7a;
+        }
+        .timeline-label {
+            font-size: 1rem;
+            color: #3a281a;
+            white-space: nowrap;
+            font-weight: bold;
+        }
+        #timelineSlider {
+            flex: 1;
+            height: 6px;
+            -webkit-appearance: none;
+            background: #b89a7a;
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+        }
+        #timelineSlider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px;
+            height: 22px;
+            background: #b22222;
+            border-radius: 50%;
+            border: 2px solid #f5e6d3;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            cursor: pointer;
+        }
+        .age-display {
+            min-width: 70px;
+            text-align: center;
+            font-size: 1rem;
+            font-weight: bold;
+            color: #3a281a;
+            background: #e8d5b5;
+            padding: 4px 8px;
+            border-radius: 20px;
+            border: 1px solid #b89a7a;
+        }
+
+        /* 控制按钮 */
+        .control-bar {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 4px;
+            flex-wrap: wrap;
+        }
+        .ctrl-btn {
+            background: #3a281a;
+            color: #e8d5b5;
+            border: none;
+            padding: 8px 24px;
+            border-radius: 30px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-family: 'KaiTi', serif;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .ctrl-btn:hover {
+            background: #5a3e2b;
+            transform: translateY(-2px);
+        }
+        .ctrl-btn i { font-size: 1.1rem; }
+        .ctrl-btn.active {
+            background: #b8860b;
+            color: #1e140e;
+        }
+
+        /* 印章激活动画 */
+        @keyframes inkSpread {
+            0% { transform: scale(0.8); opacity: 0.3; filter: blur(4px); }
+            100% { transform: scale(1); opacity: 1; filter: blur(0); }
+        }
+        .station-group.active .seal {
+            animation: inkSpread 0.6s ease-out;
+            fill: #b8860b;
+            stroke: #8b5a2b;
+        }
+
+        @media (max-width: 600px) {
+            .header-title { font-size: 1.6rem; letter-spacing: 4px; }
+            .card-title { font-size: 1.4rem; }
+            .story-text { font-size: 0.95rem; }
+            .timeline-area { flex-wrap: wrap; }
+            .control-bar { gap: 10px; }
+            .ctrl-btn { padding: 6px 16px; font-size: 0.9rem; }
+            .scroll-container { padding: 20px 10px 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="scroll-container">
+    <div class="main-content">
+        <div class="header-title">
+            东坡足迹
+            <small>—— 一蓑烟雨任平生 ——</small>
+        </div>
+
+        <div class="map-wrapper">
+            <svg id="mapSvg" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet">
+                <defs>
+                    <!-- 手绘纸张纹理滤镜 -->
+                    <filter id="paperTexture" x="-5%" y="-5%" width="110%" height="110%">
+                        <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="5" result="noise" />
+                        <feColorMatrix type="matrix" values="0 0 0 0 0.88  0 0 0 0 0.82  0 0 0 0 0.72  0 0 0 0.06 0" in="noise" result="tintNoise"/>
+                        <feBlend in="SourceGraphic" in2="tintNoise" mode="multiply" />
+                    </filter>
+                    <!-- 地形起伏的柔和模糊 -->
+                    <filter id="terrainSoft">
+                        <feGaussianBlur stdDeviation="0.8"/>
+                    </filter>
+                    <!-- 山脉阴影 -->
+                    <radialGradient id="mountainShadow" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="#8b7355" stop-opacity="0.25"/>
+                        <stop offset="100%" stop-color="#8b7355" stop-opacity="0"/>
+                    </radialGradient>
+                    <!-- 河流渐变 -->
+                    <linearGradient id="riverGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#7ba4b8" stop-opacity="0.5"/>
+                        <stop offset="50%" stop-color="#8fb8cc" stop-opacity="0.7"/>
+                        <stop offset="100%" stop-color="#7ba4b8" stop-opacity="0.5"/>
+                    </linearGradient>
+                </defs>
+
+                <!-- ===== 北宋地形图背景 ===== -->
+                <!-- 宣纸底色 -->
+                <rect width="1000" height="500" fill="#ede3d0" rx="14" />
+                <rect width="1000" height="500" fill="#e8dcc8" opacity="0.6" filter="url(#paperTexture)" rx="14" />
+
+                <!-- ---- 海岸线 / 东海 / 南海 ---- -->
+                <path d="M 920 120 Q 950 180 940 240 Q 930 300 900 360 Q 880 410 860 460 L 1000 500 L 1000 100 Z"
+                      fill="#a8c4d4" opacity="0.25" />
+                <path d="M 920 120 Q 950 180 940 240 Q 930 300 900 360 Q 880 410 860 460"
+                      fill="none" stroke="#7ba4b8" stroke-width="2" opacity="0.5" />
+                <!-- 渤海湾 -->
+                <path d="M 560 60 Q 620 50 680 70 Q 720 90 740 130 Q 730 160 700 170 Q 660 175 620 160 Q 580 140 560 100 Z"
+                      fill="#a8c4d4" opacity="0.2" />
+                <path d="M 560 60 Q 620 50 680 70 Q 720 90 740 130 Q 730 160 700 170 Q 660 175 620 160 Q 580 140 560 100"
+                      fill="none" stroke="#7ba4b8" stroke-width="1.5" opacity="0.4" stroke-dasharray="3 3"/>
+
+                <!-- ---- 主要河流：黄河（北宋河道，经河北入海） ---- -->
+                <path d="M 300 220 Q 380 200 440 190 Q 500 175 540 150 Q 580 130 600 110 Q 620 95 660 85 Q 700 80 740 100"
+                      fill="none" stroke="url(#riverGrad)" stroke-width="5" stroke-linecap="round" opacity="0.6"/>
+                <path d="M 300 220 Q 380 200 440 190 Q 500 175 540 150 Q 580 130 600 110 Q 620 95 660 85 Q 700 80 740 100"
+                      fill="none" stroke="#6b9bb0" stroke-width="1.5" opacity="0.4" stroke-dasharray="4 4"/>
+                <!-- 黄河支流（渭水） -->
+                <path d="M 250 280 Q 300 260 350 250 Q 400 240 430 220"
+                      fill="none" stroke="#8fb8cc" stroke-width="2.5" opacity="0.4" stroke-linecap="round"/>
+
+                <!-- ---- 长江（北宋长江） ---- -->
+                <path d="M 180 380 Q 260 370 340 360 Q 420 350 480 340 Q 540 330 600 320 Q 660 310 720 300 Q 760 290 820 280 Q 870 270 900 260"
+                      fill="none" stroke="url(#riverGrad)" stroke-width="5" stroke-linecap="round" opacity="0.55"/>
+                <path d="M 180 380 Q 260 370 340 360 Q 420 350 480 340 Q 540 330 600 320 Q 660 310 720 300 Q 760 290 820 280 Q 870 270 900 260"
+                      fill="none" stroke="#6b9bb0" stroke-width="1.5" opacity="0.35" stroke-dasharray="5 5"/>
+                <!-- 长江支流（汉水、湘江等） -->
+                <path d="M 350 300 Q 400 320 450 330 Q 500 340 540 330"
+                      fill="none" stroke="#8fb8cc" stroke-width="2" opacity="0.35" stroke-linecap="round"/>
+                <path d="M 300 420 Q 400 400 500 380 Q 560 370 600 350"
+                      fill="none" stroke="#8fb8cc" stroke-width="2" opacity="0.3" stroke-linecap="round"/>
+
+                <!-- ---- 淮河 ---- -->
+                <path d="M 520 280 Q 600 290 680 280 Q 740 270 780 250"
+                      fill="none" stroke="#8fb8cc" stroke-width="2" opacity="0.3" stroke-linecap="round" stroke-dasharray="6 4"/>
+
+                <!-- ---- 山脉（太行山、秦岭、大别山、南岭、五岭等） ---- -->
+                <!-- 秦岭（东西走向，分隔南北） -->
+                <g opacity="0.35" filter="url(#terrainSoft)">
+                    <path d="M 200 250 L 240 235 L 280 245 L 320 230 L 360 240 L 400 225 L 440 235 L 470 220"
+                          fill="none" stroke="#8b7355" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M 200 250 L 240 235 L 280 245 L 320 230 L 360 240 L 400 225 L 440 235 L 470 220"
+                          fill="none" stroke="#6b5a45" stroke-width="2" stroke-dasharray="2 6" stroke-linecap="round"/>
+                </g>
+                <!-- 太行山（南北走向） -->
+                <g opacity="0.3" filter="url(#terrainSoft)">
+                    <path d="M 400 140 L 420 160 L 430 190 L 440 210 L 450 240"
+                          fill="none" stroke="#8b7355" stroke-width="9" stroke-linecap="round"/>
+                </g>
+                <!-- 大别山 -->
+                <g opacity="0.25" filter="url(#terrainSoft)">
+                    <path d="M 500 290 L 540 300 L 580 295 L 620 305"
+                          fill="none" stroke="#8b7355" stroke-width="7" stroke-linecap="round"/>
+                </g>
+                <!-- 南岭 / 五岭 -->
+                <g opacity="0.3" filter="url(#terrainSoft)">
+                    <path d="M 600 400 L 650 390 L 700 395 L 750 385 L 800 390"
+                          fill="none" stroke="#8b7355" stroke-width="8" stroke-linecap="round"/>
+                </g>
+                <!-- 武夷山 / 东南丘陵 -->
+                <g opacity="0.2" filter="url(#terrainSoft)">
+                    <path d="M 760 340 L 790 350 L 820 345 L 850 360"
+                          fill="none" stroke="#8b7355" stroke-width="6" stroke-linecap="round"/>
+                </g>
+                <!-- 海南岛（儋州所在） -->
+                <path d="M 680 460 Q 700 450 720 455 Q 730 465 720 475 Q 700 480 685 475 Q 675 470 680 460 Z"
+                      fill="#c9b89a" opacity="0.5" stroke="#8b7355" stroke-width="1.5"/>
+                <!-- 台湾岛（示意） -->
+                <path d="M 880 410 Q 890 400 900 410 Q 905 430 895 450 Q 885 455 878 440 Q 875 425 880 410 Z"
+                      fill="#c9b89a" opacity="0.3" stroke="#8b7355" stroke-width="1"/>
+
+                <!-- ---- 州府地名标注（北宋地名，古风小字） ---- -->
+                <g font-family="'STKaiti','KaiTi',serif" font-size="11" fill="#7a5a3a" opacity="0.55">
+                    <text x="460" y="165" text-anchor="middle">开封府</text>
+                    <text x="730" y="285" text-anchor="middle">杭州</text>
+                    <text x="620" y="135" text-anchor="middle">密州</text>
+                    <text x="560" y="305" text-anchor="middle">黄州</text>
+                    <text x="740" y="385" text-anchor="middle">惠州</text>
+                    <text x="700" y="445" text-anchor="middle">儋州</text>
+                    <text x="370" y="205" text-anchor="middle">凤翔府</text>
+                    <text x="180" y="335" text-anchor="middle">眉州</text>
+                    <text x="720" y="295" text-anchor="middle" opacity="0.4">临安</text>
+                    <text x="400" y="275" text-anchor="middle">京兆府</text>
+                    <text x="250" y="410" text-anchor="middle" opacity="0.4">成都府</text>
+                    <text x="540" y="260" text-anchor="middle" opacity="0.4">江陵府</text>
+                    <text x="800" y="250" text-anchor="middle" opacity="0.35">明州</text>
+                    <text x="620" y="380" text-anchor="middle" opacity="0.35">广州</text>
+                    <text x="340" y="160" text-anchor="middle" opacity="0.3">太原府</text>
+                    <text x="490" y="110" text-anchor="middle" opacity="0.3">大名府</text>
+                </g>
+
+                <!-- ---- 海域标注 ---- -->
+                <g font-family="'STKaiti','KaiTi',serif" font-size="14" fill="#6b9bb0" opacity="0.4">
+                    <text x="940" y="300" text-anchor="middle" transform="rotate(90, 940, 300)">东 海</text>
+                    <text x="850" y="440" text-anchor="middle" transform="rotate(-15, 850, 440)">南 海</text>
+                </g>
+
+                <!-- ---- 装饰性山水纹（手绘感） ---- -->
+                <path d="M 50 400 Q 120 370 200 390 T 350 380 T 500 395" stroke="#b89a7a" stroke-width="1" fill="none" opacity="0.25" stroke-dasharray="3 5"/>
+                <path d="M 100 430 Q 250 410 400 425 T 700 420" stroke="#b89a7a" stroke-width="1" fill="none" opacity="0.2" stroke-dasharray="2 6"/>
+
+                <!-- ===== 路线与站点（位于地形图之上） ===== -->
+                <path id="routePath" class="route-path" d="" />
+                <g id="stationsContainer"></g>
+            </svg>
+        </div>
+
+        <div id="infoCard" class="info-card hidden">
+            <div class="card-title">
+                <span id="cardCity">眉山</span>
+                <span id="cardAge" class="age-badge">20岁</span>
+            </div>
+            <div class="card-body" id="cardBody">
+                <div id="cardStory" class="story-text">加载中…</div>
+                <div class="poem-box">
+                    <div id="cardPoem" class="poem-text"></div>
+                    <div class="poem-actions">
+                        <button id="readPoemBtn" class="btn-read"><i class="fas fa-volume-up"></i> 朗读诗词</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="timeline-area">
+            <span class="timeline-label">人生轨迹</span>
+            <input type="range" id="timelineSlider" min="0" max="8" value="0" step="1">
+            <span id="ageDisplay" class="age-display">20岁</span>
+        </div>
+
+        <div class="control-bar">
+            <button id="bgmToggle" class="ctrl-btn"><i class="fas fa-music"></i> 古琴背景音</button>
+            <button id="rainToggle" class="ctrl-btn"><i class="fas fa-cloud-rain"></i> 雨声</button>
+            <button id="resetRouteBtn" class="ctrl-btn"><i class="fas fa-undo-alt"></i> 重置轨迹</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ========== 数据 ==========
+    const stations = [
+        { id: 'meishan', name: '眉山', age: 20, year: '1037-1056', x: 200, y: 350,
+          story: '苏轼生于眉州眉山，字子瞻，号东坡居士。少年时在母亲程氏和父亲苏洵的教导下饱读诗书，二十岁与弟苏辙随父出蜀赴京应试。',
+          poem: '人生到处知何似，应似飞鸿踏雪泥。\n泥上偶然留指爪，鸿飞那复计东西。' },
+        { id: 'kaifeng', name: '开封', age: 22, year: '1057', x: 480, y: 180,
+          story: '嘉祐二年，苏轼与苏辙同榜进士及第，主考官欧阳修对其文章赞叹不已。开封是北宋都城，也是苏轼仕途的起点。',
+          poem: '旧书不厌百回读，熟读深思子自知。\n他年名宦恐不免，今日栖迟那可追。' },
+        { id: 'fengxiang', name: '凤翔', age: 26, year: '1061', x: 380, y: 220,
+          story: '苏轼出任凤翔府签书判官，这是他的第一份实职。在凤翔三年，他深入民间，写下《喜雨亭记》《凌虚台记》等名篇。',
+          poem: '人生到处知何似，应似飞鸿踏雪泥。\n泥上偶然留指爪，鸿飞那复计东西。' },
+        { id: 'hangzhou1', name: '杭州', age: 36, year: '1071', x: 700, y: 300,
+          story: '因反对王安石变法，苏轼自请外放杭州通判。他沉醉于西湖山水，写下大量诗词，并称“前生我已到杭州”。',
+          poem: '水光潋滟晴方好，山色空蒙雨亦奇。\n欲把西湖比西子，淡妆浓抹总相宜。' },
+        { id: 'mizhou', name: '密州', age: 40, year: '1074', x: 650, y: 150,
+          story: '苏轼调任密州知州。此时他仕途失意，与弟苏辙已七年未见。中秋夜，他大醉一场，写下千古名篇《水调歌头》。',
+          poem: '明月几时有？把酒问青天。\n不知天上宫阙，今夕是何年。\n但愿人长久，千里共婵娟。' },
+        { id: 'huangzhou', name: '黄州', age: 45, year: '1080', x: 580, y: 320,
+          story: '乌台诗案后，苏轼被贬黄州团练副使。他在城东坡地开荒耕种，自号“东坡居士”。这段岁月成就了他文学的最高峰，写下《赤壁赋》《念奴娇·赤壁怀古》。',
+          poem: '大江东去，浪淘尽，千古风流人物。\n故垒西边，人道是，三国周郎赤壁。\n乱石穿空，惊涛拍岸，卷起千堆雪。' },
+        { id: 'hangzhou2', name: '杭州', age: 54, year: '1089', x: 720, y: 310,
+          story: '苏轼二度到杭州任知州。他疏浚西湖，用挖出的淤泥筑成苏堤，并建立安乐坊（公立医院），造福一方百姓。',
+          poem: '黑云翻墨未遮山，白雨跳珠乱入船。\n卷地风来忽吹散，望湖楼下水如天。' },
+        { id: 'huizhou', name: '惠州', age: 59, year: '1094', x: 750, y: 400,
+          story: '年近六旬的苏轼被贬惠州。他并未消沉，反而写下“日啖荔枝三百颗”的旷达诗句，并在此推广农业技术，改善民生。',
+          poem: '罗浮山下四时春，卢橘杨梅次第新。\n日啖荔枝三百颗，不辞长作岭南人。' },
+        { id: 'danzhou', name: '儋州', age: 62, year: '1097', x: 680, y: 460,
+          story: '苏轼被贬至海南儋州，这是宋朝最严厉的惩罚。但他在此办学授课，传播中原文化，培养出海南第一位举人。北归时他写道：“九死南荒吾不恨，兹游奇绝冠平生。”',
+          poem: '九死南荒吾不恨，兹游奇绝冠平生。\n天容海色本澄清，云散月明谁点缀。' }
+    ];
+
+    // ========== 元素引用 ==========
+    const stationsContainer = document.getElementById('stationsContainer');
+    const routePath = document.getElementById('routePath');
+    const infoCard = document.getElementById('infoCard');
+    const cardCity = document.getElementById('cardCity');
+    const cardAge = document.getElementById('cardAge');
+    const cardStory = document.getElementById('cardStory');
+    const cardPoem = document.getElementById('cardPoem');
+    const readBtn = document.getElementById('readPoemBtn');
+    const timelineSlider = document.getElementById('timelineSlider');
+    const ageDisplay = document.getElementById('ageDisplay');
+    const cardBody = document.getElementById('cardBody');
+
+    let activeStationId = null;
+    let isCardVisible = false;
+
+    // ========== 渲染站点 ==========
+    function renderStations() {
+        stationsContainer.innerHTML = '';
+        stations.forEach((s, index) => {
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            g.setAttribute('class', 'station-group');
+            g.dataset.id = s.id;
+            g.dataset.index = index;
+            g.setAttribute('transform', `translate(${s.x}, ${s.y})`);
+
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', '-18'); rect.setAttribute('y', '-18');
+            rect.setAttribute('width', '36'); rect.setAttribute('height', '36');
+            rect.setAttribute('rx', '6'); rect.setAttribute('class', 'seal');
+            g.appendChild(rect);
+
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', '0'); text.setAttribute('y', '1');
+            text.setAttribute('class', 'seal-text');
+            text.textContent = s.name.length > 2 ? s.name.substring(0, 2) : s.name;
+            g.appendChild(text);
+
+            g.addEventListener('click', () => activateStation(s.id, index));
+            stationsContainer.appendChild(g);
+        });
+    }
+
+    function updateRoute(activeIndex) {
+        if (activeIndex < 0) { routePath.setAttribute('d', ''); return; }
+        let d = '';
+        for (let i = 0; i <= activeIndex; i++) {
+            const s = stations[i];
+            if (i === 0) d += `M ${s.x} ${s.y}`;
+            else d += ` L ${s.x} ${s.y}`;
+        }
+        routePath.setAttribute('d', d);
+        routePath.classList.add('active');
+    }
+
+    function activateStation(id, index) {
+        const station = stations.find(s => s.id === id);
+        if (!station) return;
+
+        document.querySelectorAll('.station-group').forEach(g => g.classList.remove('active'));
+        const currentGroup = document.querySelector(`.station-group[data-id="${id}"]`);
+        if (currentGroup) currentGroup.classList.add('active');
+
+        if (isCardVisible) {
+            cardBody.style.animation = 'none';
+            cardBody.offsetHeight;
+            cardBody.style.animation = 'fadeUp 0.4s ease-out';
+        }
+
+        cardCity.textContent = station.name;
+        cardAge.textContent = station.age + '岁 · ' + station.year;
+        cardStory.textContent = station.story;
+        cardPoem.innerHTML = '“' + station.poem.replace(/\n/g, '<br>') + '”';
+
+        if (!isCardVisible) {
+            infoCard.classList.remove('hidden');
+            isCardVisible = true;
+        }
+
+        updateRoute(index);
+        timelineSlider.value = index;
+        ageDisplay.textContent = station.age + '岁';
+        activeStationId = id;
+    }
+
+    renderStations();
+    setTimeout(() => {
+        infoCard.classList.add('hidden');
+        isCardVisible = false;
+        activateStation('meishan', 0);
+    }, 100);
+
+    timelineSlider.addEventListener('input', (e) => {
+        const index = parseInt(e.target.value);
+        const station = stations[index];
+        if (station) activateStation(station.id, index);
+    });
+
+    // ========== 语音朗读 ==========
+    let speechSynth = window.speechSynthesis;
+    function speakPoem(text) {
+        if (!speechSynth) { alert('您的浏览器不支持语音朗读。'); return; }
+        if (speechSynth.speaking) speechSynth.cancel();
+        const cleanText = text.replace(/[“”"]/g, '').replace(/\n/g, '，');
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.lang = 'zh-CN';
+        utterance.rate = 0.8;
+        utterance.pitch = 1.1;
+        const voices = speechSynth.getVoices();
+        const zhVoice = voices.find(v => v.lang.includes('zh'));
+        if (zhVoice) utterance.voice = zhVoice;
+        speechSynth.speak(utterance);
+    }
+    readBtn.addEventListener('click', () => {
+        const station = stations.find(s => s.id === activeStationId);
+        if (station) speakPoem(station.poem);
+    });
+    if (speechSynth) speechSynth.getVoices();
+
+    // ========== 音效 ==========
+    let audioCtx = null;
+    let bgmGainNode = null;
+    let rainGainNode = null;
+    let bgmOscillators = [];
+    let rainSource = null;
+
+    function initAudio() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function toggleBgm() {
+        initAudio();
+        const btn = document.getElementById('bgmToggle');
+        if (bgmGainNode && bgmGainNode.gain.value > 0) {
+            bgmGainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
+            btn.classList.remove('active');
+        } else {
+            if (!bgmGainNode) {
+                bgmGainNode = audioCtx.createGain();
+                bgmGainNode.gain.value = 0;
+                bgmGainNode.connect(audioCtx.destination);
+                const freqs = [130.81, 196.00, 261.63];
+                bgmOscillators = freqs.map(freq => {
+                    const osc = audioCtx.createOscillator();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    const gain = audioCtx.createGain();
+                    gain.gain.value = 0.1;
+                    osc.connect(gain); gain.connect(bgmGainNode); osc.start();
+                    return { osc, gain };
+                });
+                const lfo = audioCtx.createOscillator();
+                lfo.frequency.value = 0.2;
+                const lfoGain = audioCtx.createGain();
+                lfoGain.gain.value = 2;
+                lfo.connect(lfoGain);
+                bgmOscillators.forEach(o => lfoGain.connect(o.osc.frequency));
+                lfo.start();
+            }
+            bgmGainNode.gain.setTargetAtTime(0.15, audioCtx.currentTime, 0.5);
+            btn.classList.add('active');
+        }
+    }
+
+    function toggleRain() {
+        initAudio();
+        const btn = document.getElementById('rainToggle');
+        if (rainGainNode && rainGainNode.gain.value > 0) {
+            rainGainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
+            btn.classList.remove('active');
+        } else {
+            if (!rainGainNode) {
+                rainGainNode = audioCtx.createGain();
+                rainGainNode.gain.value = 0;
+                rainGainNode.connect(audioCtx.destination);
+                const bufferSize = audioCtx.sampleRate * 2;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                rainSource = audioCtx.createBufferSource();
+                rainSource.buffer = buffer;
+                rainSource.loop = true;
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.value = 1000;
+                rainSource.connect(filter);
+                filter.connect(rainGainNode);
+                rainSource.start();
+            }
+            rainGainNode.gain.setTargetAtTime(0.08, audioCtx.currentTime, 0.5);
+            btn.classList.add('active');
+        }
+    }
+
+    document.getElementById('bgmToggle').addEventListener('click', toggleBgm);
+    document.getElementById('rainToggle').addEventListener('click', toggleRain);
+
+    document.getElementById('resetRouteBtn').addEventListener('click', () => {
+        activateStation('meishan', 0);
+        if (speechSynth && speechSynth.speaking) speechSynth.cancel();
+    });
+</script>
+</body>
+</html>
